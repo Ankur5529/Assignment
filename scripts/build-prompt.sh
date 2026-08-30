@@ -34,7 +34,7 @@ if [[ "$STATUS" == "passed" ]]; then
 fi
 
 # Collect all failures (max 20)
-FAILURES=$( -e "
+FAILURES=$("$NODE_CMD" -e "
 const r = require('./$REPORT');
 const all = r.gates.flatMap(g => g.failures.map(f => ({gate: g.gate, ...f})));
 const limited = all.slice(0, 20);
@@ -43,7 +43,7 @@ limited.forEach(f => console.log(\`\${f.file}:\${f.line} [\${f.code}] \${f.messa
 FAILURE_COUNT=$(echo "$FAILURES" | grep -c . || echo 0)
 
 # ─── Gather ±15 lines of source context around each distinct failing location ─
-CONTEXT=$( -e "
+CONTEXT=$("$NODE_CMD" -e "
 const r = require('./$REPORT');
 const fs = require('fs');
 const all = r.gates.flatMap(g => g.failures.map(f => ({...f})));
