@@ -25,7 +25,7 @@ pass "standards"
 
 # ─── Stage 1: Lint (Biome) ───────────────────────────────────────────────────
 log "Stage: lint"
-if ! npx @biomejs/biome check --reporter json src/ > test-results/biome-report.json 2>&1; then
+if ! npx @biomejs/biome check --reporter json src/ > test-results/biome-report.json; then
   # Also write human-readable output for debugging
   npx @biomejs/biome check src/ 2>&1 | tail -20 || true
   fail "lint"
