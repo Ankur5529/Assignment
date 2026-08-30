@@ -1,4 +1,3 @@
-NODE_CMD=
 #!/usr/bin/env bash
 # =============================================================================
 # scripts/build-prompt.sh  — Failure → Dyad prompt packet constructor
@@ -11,6 +10,8 @@ NODE_CMD=
 # =============================================================================
 set -euo pipefail
 
+NODE_CMD="${NODE_CMD:-node}"
+
 REPORT="${1:-test-results/gate-report.json}"
 CYCLE_N="${2:-1}"
 MAX_CYCLES="${3:-6}"
@@ -22,10 +23,10 @@ cd "$ROOT"
 [[ -f "$REPORT" ]] || { echo "gate-report.json not found: $REPORT" >&2; exit 1; }
 
 # ─── Parse report fields ──────────────────────────────────────────────────────
-TIER=$( -e "const r=require('./$REPORT');console.log(r.tier)")
-COMMIT=$( -e "const r=require('./$REPORT');console.log(r.commit)")
-SIG=$( -e "const r=require('./$REPORT');console.log(r.failureSignature)")
-STATUS=$( -e "const r=require('./$REPORT');console.log(r.status)")
+TIER=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.tier)")
+COMMIT=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.commit)")
+SIG=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.failureSignature)")
+STATUS=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.status)")
 
 if [[ "$STATUS" == "passed" ]]; then
   echo "[build-prompt] Gates are PASSING — no prompt needed"
