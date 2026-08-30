@@ -1,1 +1,0 @@
-{"cycle":1,"startedAt":"2026-08-30T12:43:58Z","tier":1,"signature":"sha256:e416781bcd08c7e7e1d494dd660061f83b9f335c1b9a3ac58d73762bad1253c1","attempts":2,"outcome":"escalated","durationSec":8,"filesChanged":[],"reason":"Dyad modified protected paths (e2e/, scripts/, gate configs)"}
