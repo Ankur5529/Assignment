@@ -18,6 +18,38 @@ TARGET="${1:-"$(pwd)"}"
 # Resolve to absolute path
 TARGET="$(cd "$TARGET" && pwd)"
 
+# ─── Ensure 'node' is on PATH ─────────────────────────────────────────────────
+# On Windows + WSL, node may not be on bash's PATH even if npx is.
+if ! command -v node &>/dev/null; then
+  # Try to find node next to npx
+  NPX_BIN="$(command -v npx 2>/dev/null || true)"
+  if [[ -n "$NPX_BIN" ]]; then
+    NODE_DIR="$(dirname "$NPX_BIN")"
+    if [[ -f "$NODE_DIR/node" ]] || [[ -f "$NODE_DIR/node.exe" ]]; then
+      export PATH="$NODE_DIR:$PATH"
+    fi
+  fi
+  # If still not found, try common locations
+  for TRY in \
+    "/mnt/c/Program Files/nodejs" \
+    "/usr/local/bin" \
+    "/usr/bin" \
+    "$HOME/.nvm/versions/node/$(cat .nvmrc 2>/dev/null || echo 'v20')/bin" \
+  ; do
+    if [[ -f "$TRY/node" ]] || [[ -f "$TRY/node.exe" ]]; then
+      export PATH="$TRY:$PATH"
+      break
+    fi
+  done
+fi
+
+if ! command -v node &>/dev/null; then
+  echo "[import] WARNING: 'node' not found on PATH — Node.js scripts will use 'npx node'" >&2
+  NODE_CMD="npx node"
+else
+  NODE_CMD="node"
+fi
+
 log()  { echo "[import] $*"; }
 ok()   { echo "[import] ✓ $*"; }
 warn() { echo "[import] ⚠ $*"; }
@@ -52,14 +84,14 @@ fi
 
 # Ensure engines field in package.json
 NODE_MAJOR="$(cat .nvmrc)"
-node -e "
+$NODE_CMD -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
 const engines = pkg.engines || {};
 if (!engines.node || !engines.node.includes('$NODE_MAJOR')) {
   engines.node = '>=$NODE_MAJOR.0.0';
   pkg.engines = engines;
-  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n');
   process.stdout.write('updated');
 } else {
   process.stdout.write('ok');
@@ -88,7 +120,7 @@ ok "npm run build succeeded"
 
 # ─── 6. Biome ────────────────────────────────────────────────────────────────
 BIOME_VER="1.9.4"
-if ! node -e "require('@biomejs/biome')" 2>/dev/null; then
+if ! $NODE_CMD -e "require('@biomejs/biome')" 2>/dev/null; then
   log "Installing Biome $BIOME_VER..."
   npm install --save-dev "@biomejs/biome@$BIOME_VER" 2>&1 | tail -3
   ok "Biome installed"
@@ -132,16 +164,18 @@ else
 fi
 
 # Verify useExhaustiveDependencies actually fires (not silently disabled)
-PROBE_FILE="$(mktemp --suffix=.tsx)"
+# Write probe inside src/ so biome.json from project root is picked up
+PROBE_FILE="src/__biome_probe__.tsx"
 cat > "$PROBE_FILE" <<'PROBE_EOF'
-import { useState, useEffect } from 'react'
-export function Probe() {
-  const [x, setX] = useState(0)
-  useEffect(() => { setX(1) }, [])  // missing x in deps — should fire
-  return x
+import { useEffect } from 'react'
+export function Probe({ count }: { count: number }) {
+  useEffect(() => {
+    console.log(count)
+  }, [])
+  return count
 }
 PROBE_EOF
-BIOME_OUT=$(npx --yes @biomejs/biome check --reporter json "$PROBE_FILE" 2>/dev/null || true)
+BIOME_OUT=$(npx @biomejs/biome check --reporter json "$PROBE_FILE" 2>/dev/null || true)
 rm -f "$PROBE_FILE"
 if echo "$BIOME_OUT" | grep -q "useExhaustiveDependencies"; then
   ok "Biome useExhaustiveDependencies fires correctly"
@@ -150,7 +184,7 @@ else
 fi
 
 # ─── 7. Playwright ───────────────────────────────────────────────────────────
-if ! node -e "require('@playwright/test')" 2>/dev/null; then
+if ! $NODE_CMD -e "require('@playwright/test')" 2>/dev/null; then
   log "Installing Playwright..."
   npm install --save-dev @playwright/test 2>&1 | tail -3
   ok "Playwright installed"
@@ -159,13 +193,9 @@ else
 fi
 
 # Install Chromium browser only
-if [[ ! -d "node_modules/.playwright" ]] && ! npx playwright --version 2>/dev/null | grep -q chromium; then
-  log "Installing Chromium browser..."
-  npx playwright install chromium 2>&1 | tail -3
-  ok "Chromium installed"
-else
-  ok "Playwright browser already available"
-fi
+log "Installing Chromium browser..."
+npx playwright install chromium 2>&1 | tail -5
+ok "Chromium ready"
 
 if [[ ! -f "playwright.config.ts" ]] && [[ ! -f "playwright.config.js" ]]; then
   cat > playwright.config.ts <<'PW_EOF'
@@ -204,6 +234,7 @@ HARNESS_SCRIPTS=(
   "cycle.sh"
   "verify-protected.sh"
   "scan-banned.sh"
+  "generate-import-report.mjs"
 )
 
 for s in "${HARNESS_SCRIPTS[@]}"; do
@@ -227,123 +258,23 @@ if [[ ! -f "e2e/.gitkeep" ]] && [[ -z "$(ls -A e2e/ 2>/dev/null)" ]]; then
 fi
 
 # ─── 9. harness.json ─────────────────────────────────────────────────────────
-IMPORT_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
-cat > harness.json <<HARNESS_EOF
-{
-  "sourceGenerator": "lovable",
-  "importDate": "$IMPORT_DATE",
-  "harnessVersion": "$HARNESS_VERSION",
-  "targetPath": "$TARGET"
+IMPORT_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u)"
+$NODE_CMD - <<HARNESS_JS
+const fs = require('fs')
+const data = {
+  sourceGenerator: 'lovable',
+  importDate: '${IMPORT_DATE}',
+  harnessVersion: '${HARNESS_VERSION}',
+  targetPath: '${TARGET}'
 }
-HARNESS_EOF
+fs.writeFileSync('harness.json', JSON.stringify(data, null, 2) + '\n')
+console.log('[import] harness.json written')
+HARNESS_JS
 ok "harness.json written"
 
 # ─── 10. Import report ───────────────────────────────────────────────────────
 log "Generating import-report.md..."
-
-# 10a — Float currency math (toFixed on price values)
-FLOAT_HITS=$(grep -rEn "toFixed\s*\(" src/ 2>/dev/null || true)
-FLOAT_COUNT=$(echo "$FLOAT_HITS" | grep -c toFixed || echo 0)
-
-# 10b — data-testid coverage
-INTERACTIVE_MISSING=$(grep -rEn "<(button|input|select|textarea|a)\b" src/ 2>/dev/null | \
-  grep -v "data-testid" | wc -l | tr -d ' ' || echo 0)
-
-# 10c — typecheck baseline
-TSC_OUTPUT=$(npx tsc --noEmit 2>&1 || true)
-TSC_ERROR_COUNT=$(echo "$TSC_OUTPUT" | grep -c "error TS" || echo 0)
-
-# 10d — lint baseline
-LINT_OUTPUT=$(npx @biomejs/biome check src/ 2>&1 || true)
-LINT_ERROR_COUNT=$(echo "$LINT_OUTPUT" | grep -c "error\|✖" || echo 0)
-
-# 10e — banned patterns
-BANNED_PATTERN='@ts-ignore|@ts-expect-error|as any|biome-ignore|test\.skip|test\.only|xit\(|describe\.skip'
-BANNED_HITS=$(grep -rEn "$BANNED_PATTERN" src/ e2e/ 2>/dev/null || true)
-BANNED_COUNT=$(echo "$BANNED_HITS" | grep -c . || echo 0)
-
-# 10f — off-platform dependencies
-PLATFORM_LIST="react react-dom vite typescript @vitejs/plugin-react @biomejs/biome @playwright/test @types/react @types/react-dom"
-INSTALLED_DEPS=$(node -e "
-const p = require('./package.json');
-const all = {...(p.dependencies||{}), ...(p.devDependencies||{})};
-const platform = new Set('$PLATFORM_LIST'.split(' '));
-const off = Object.keys(all).filter(k => !platform.has(k));
-console.log(off.join('\n'));
-" 2>/dev/null || echo "")
-OFF_COUNT=$(echo "$INSTALLED_DEPS" | grep -c . || echo 0)
-
-cat > import-report.md <<REPORT_EOF
-# Import Report
-
-Generated by \`scripts/import-lovable.sh\` on $IMPORT_DATE  
-Harness version: $HARNESS_VERSION
-
----
-
-## Check 1 — Float Currency Math (toFixed)
-
-**Count**: $FLOAT_COUNT occurrence(s)
-
-Generators default to float math with \`.toFixed()\`. Harness standard is integer cents.
-$(if [[ $FLOAT_COUNT -gt 0 ]]; then echo ""; echo "\`\`\`"; echo "$FLOAT_HITS"; echo "\`\`\`"; fi)
-$(if [[ $FLOAT_COUNT -eq 0 ]]; then echo "_No float currency math detected._"; fi)
-
----
-
-## Check 2 — Missing data-testid on Interactive Elements
-
-**Count**: $INTERACTIVE_MISSING interactive element(s) without \`data-testid\`
-
-Every element the Playwright tests touch needs a \`data-testid\` attribute.
-$(if [[ $INTERACTIVE_MISSING -eq 0 ]]; then echo "_All interactive elements have data-testid._"; fi)
-
----
-
-## Check 3 — TypeScript Error Baseline
-
-**Error count at import**: $TSC_ERROR_COUNT
-
-These errors are inherited debt, not introduced by Dyad. Any new errors in the loop are regressions.
-$(if [[ $TSC_ERROR_COUNT -gt 0 ]]; then echo ""; echo "\`\`\`"; echo "$TSC_OUTPUT" | head -30; echo "\`\`\`"; fi)
-$(if [[ $TSC_ERROR_COUNT -eq 0 ]]; then echo "_Clean typecheck at import._"; fi)
-
----
-
-## Check 4 — Lint Error Baseline
-
-**Error count at import**: $LINT_ERROR_COUNT
-
-$(if [[ $LINT_ERROR_COUNT -eq 0 ]]; then echo "_Clean lint at import._"; fi)
-$(if [[ $LINT_ERROR_COUNT -gt 0 ]]; then echo "\`\`\`"; echo "$LINT_OUTPUT" | head -20; echo "\`\`\`"; fi)
-
----
-
-## Check 5 — Banned Patterns Already Present
-
-**Count**: $BANNED_COUNT banned pattern(s) in source
-
-Pattern: \`$BANNED_PATTERN\`
-
-$(if [[ $BANNED_COUNT -eq 0 ]]; then echo "_No banned patterns found._"; fi)
-$(if [[ $BANNED_COUNT -gt 0 ]]; then echo "\`\`\`"; echo "$BANNED_HITS"; echo "\`\`\`"; fi)
-
----
-
-## Check 6 — Off-Platform Dependencies
-
-**Count**: $OFF_COUNT package(s) not on the platform list
-
-Platform list: $PLATFORM_LIST
-
-$(if [[ $OFF_COUNT -eq 0 ]]; then echo "_All dependencies are on the platform list._"; fi)
-$(if [[ $OFF_COUNT -gt 0 ]]; then echo "Packages requiring review:"; echo "\`\`\`"; echo "$INSTALLED_DEPS"; echo "\`\`\`"; fi)
-
----
-
-_End of import report._
-REPORT_EOF
-
+$NODE_CMD scripts/generate-import-report.mjs "$HARNESS_VERSION" 2>&1
 ok "import-report.md generated"
 
 # ─── 11. Commit harness additions ────────────────────────────────────────────
@@ -351,7 +282,7 @@ git add -A
 if git diff --cached --quiet; then
   ok "Nothing new to commit (idempotent re-run)"
 else
-  git commit -m "chore: harness onboarding via import-lovable.sh (v$HARNESS_VERSION)"
+  git commit -m "chore: harness onboarding via import-lovable.sh (v${HARNESS_VERSION})"
   ok "Harness additions committed"
 fi
 
