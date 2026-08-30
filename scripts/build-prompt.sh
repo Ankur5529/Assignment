@@ -10,7 +10,7 @@
 # =============================================================================
 set -euo pipefail
 
-NODE_CMD="${NODE_CMD:-node}"
+export NODE_CMD="${NODE_CMD:-node}"
 
 REPORT="${1:-test-results/gate-report.json}"
 CYCLE_N="${2:-1}"
