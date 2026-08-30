@@ -51,13 +51,31 @@ get_failure_count() {
   node -e "
     const r = require('./$GATE_REPORT');
     const c = r.gates.reduce((n, g) => n + g.failures.length, 0);
-    console.log(c);
-  " 2>/dev/null || echo 999
+  cat > test-results/get-failure-count.js <<EOF
+const fs = require('fs');
+try {
+  const r = JSON.parse(fs.readFileSync('$GATE_REPORT', 'utf8'));
+  const c = r.gates.reduce((n, g) => n + g.failures.length, 0);
+  console.log(c);
+} catch(e) {
+  console.log(999);
+}
+EOF
+  $NODE_CMD test-results/get-failure-count.js 2>/dev/null || echo 999
 }
 
 get_signature() {
   if [[ ! -f "$GATE_REPORT" ]]; then echo "unknown"; return; fi
-  node -e "const r=require('./$GATE_REPORT');console.log(r.failureSignature)" 2>/dev/null || echo "unknown"
+  cat > test-results/get-signature.js <<EOF
+const fs = require('fs');
+try {
+  const r = JSON.parse(fs.readFileSync('$GATE_REPORT', 'utf8'));
+  console.log(r.failureSignature || 'unknown');
+} catch(e) {
+  console.log('unknown');
+}
+EOF
+  $NODE_CMD test-results/get-signature.js 2>/dev/null || echo "unknown"
 }
 
 get_changed_files() {
@@ -73,13 +91,16 @@ append_cycle_log() {
   local outcome="$6"
   local duration_sec="$7"
   local files_changed="$8"
+  local reason="$9"
 
   local files_json="[$(echo "$files_changed" | tr '\n' ',' | sed 's/,$//' | sed 's/,/","/g' | sed 's/^/"/;s/$/"/' | sed 's/^""$//')]"
+  local reason_json="\"$reason\""
+  if [[ -z "$reason" ]]; then reason_json="null"; fi
 
   cat >> "$CYCLES_LOG" <<LOG_EOF
-{"cycle":$cycle_num,"startedAt":"$started_at","tier":$tier,"signature":"$sig","attempts":$attempts,"outcome":"$outcome","durationSec":$duration_sec,"filesChanged":$files_json}
+{"cycle":$cycle_num,"startedAt":"$started_at","tier":$tier,"signature":"$sig","attempts":$attempts,"outcome":"$outcome","durationSec":$duration_sec,"filesChanged":$files_json,"reason":$reason_json}
 LOG_EOF
-  log "Cycle log appended (cycle=$cycle_num outcome=$outcome)"
+  log "Cycle log appended (cycle=$cycle_num outcome=$outcome reason=${reason:-none})"
 }
 
 escalate() {
@@ -116,7 +137,7 @@ except: print(0)
   local files_changed
   files_changed="$(get_changed_files)" || files_changed=""
 
-  append_cycle_log "$cycle_num" "$started_at" "$TIER" "$sig" "$attempts" "escalated" "$duration" "$files_changed"
+  append_cycle_log "$cycle_num" "$started_at" "$TIER" "$sig" "$attempts" "escalated" "$duration" "$files_changed" "$reason"
 
   fail "Escalation complete. Last green: $green_commit. See cycles.jsonl for history."
   exit 1
@@ -188,12 +209,13 @@ if [[ "$GATE_PASSED" == "true" ]]; then
   ENDED_AT="$(timestamp)"
   DURATION=$(( $(date +%s 2>/dev/null || echo 0) - CYCLE_START_EPOCH ))
   FILES_CHANGED="$(get_changed_files)"
-  append_cycle_log "$CYCLE_NUM" "$STARTED_AT" "$TIER" "$CURRENT_SIG" "0" "green" "$DURATION" "$FILES_CHANGED"
+  append_cycle_log "$CYCLE_NUM" "$STARTED_AT" "$TIER" "$CURRENT_SIG" "0" "green" "$DURATION" "$FILES_CHANGED" ""
   log "Gates already GREEN — nothing to do. Cycle logged."
   exit 0
 fi
 
-CURRENT_SIGNATURE="$(get_signature)"
+INITIAL_SIGNATURE="$(get_signature)"
+CURRENT_SIGNATURE="$INITIAL_SIGNATURE"
 CURRENT_FAILURE_COUNT="$(get_failure_count)"
 
 # ─── Fix loop ────────────────────────────────────────────────────────────────
@@ -294,8 +316,8 @@ while true; do
     ENDED_AT="$(timestamp)"
     DURATION=$(( $(date +%s 2>/dev/null || echo 0) - CYCLE_START_EPOCH ))
     FILES_CHANGED="$(get_changed_files)"
-    append_cycle_log "$CYCLE_NUM" "$STARTED_AT" "$TIER" "$CURRENT_SIGNATURE" \
-      "$TOTAL_ATTEMPTS" "green" "$DURATION" "$FILES_CHANGED"
+    append_cycle_log "$CYCLE_NUM" "$STARTED_AT" "$TIER" "$INITIAL_SIGNATURE" \
+      "$TOTAL_ATTEMPTS" "green" "$DURATION" "$FILES_CHANGED" ""
     log "CYCLE $CYCLE_NUM COMPLETE — GREEN after $TOTAL_ATTEMPTS attempt(s)"
     exit 0
   fi
