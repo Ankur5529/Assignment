@@ -10,6 +10,7 @@ interface CartProps {
 }
 
 export function Cart({ lines, cart, onCheckout }: CartProps) {
+  const x = cart.doesNotExist;
   const isEmpty = lines.length === 0
   const sub = subtotalCents(lines)
   const tax = taxCents(sub)
