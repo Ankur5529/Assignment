@@ -1,3 +1,4 @@
+NODE_CMD=
 #!/usr/bin/env bash
 # =============================================================================
 # scripts/cycle.sh  — Component B: Cycle Harness
