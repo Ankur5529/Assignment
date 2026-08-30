@@ -48,9 +48,6 @@ get_commit() {
 
 get_failure_count() {
   if [[ ! -f "$GATE_REPORT" ]]; then echo 999; return; fi
-  node -e "
-    const r = require('./$GATE_REPORT');
-    const c = r.gates.reduce((n, g) => n + g.failures.length, 0);
   cat > test-results/get-failure-count.js <<EOF
 const fs = require('fs');
 try {
@@ -91,16 +88,17 @@ append_cycle_log() {
   local outcome="$6"
   local duration_sec="$7"
   local files_changed="$8"
-  local reason="$9"
+  local reason="${9:-none}"
 
-  local files_json="[$(echo "$files_changed" | tr '\n' ',' | sed 's/,$//' | sed 's/,/","/g' | sed 's/^/"/;s/$/"/' | sed 's/^""$//')]"
+  local files_json="[]"
+  if [[ -n "$files_changed" ]]; then
+    local files_json="[]"
+  fi
   local reason_json="\"$reason\""
-  if [[ -z "$reason" ]]; then reason_json="null"; fi
+  if [[ "$reason" == "none" ]]; then reason_json="null"; fi
 
-  cat >> "$CYCLES_LOG" <<LOG_EOF
-{"cycle":$cycle_num,"startedAt":"$started_at","tier":$tier,"signature":"$sig","attempts":$attempts,"outcome":"$outcome","durationSec":$duration_sec,"filesChanged":$files_json,"reason":$reason_json}
-LOG_EOF
-  log "Cycle log appended (cycle=$cycle_num outcome=$outcome reason=${reason:-none})"
+  echo "{\"cycle\":$cycle_num,\"startedAt\":\"$started_at\",\"tier\":$tier,\"signature\":\"$sig\",\"attempts\":$attempts,\"outcome\":\"$outcome\",\"durationSec\":$duration_sec,\"filesChanged\":$files_json,\"reason\":$reason_json}" >> "$CYCLES_LOG"
+  log "Cycle log appended (cycle=$cycle_num outcome=$outcome reason=$reason)"
 }
 
 escalate() {
