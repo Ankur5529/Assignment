@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# =============================================================================
-# scripts/build-prompt.sh  — Failure → Dyad prompt packet constructor
-# =============================================================================
 # Usage: bash scripts/build-prompt.sh <gate-report.json> [cycle_n] [max_cycles] [prior_attempts_file]
 #
 # Emits the structured prompt Dyad receives.
 # Advisory constraints only — structural enforcement is in verify-protected.sh
 # and scan-banned.sh, which run AFTER every Dyad invocation.
-# =============================================================================
 set -euo pipefail
 
 export NODE_CMD="${NODE_CMD:-node}"
@@ -22,7 +18,7 @@ cd "$ROOT"
 
 [[ -f "$REPORT" ]] || { echo "gate-report.json not found: $REPORT" >&2; exit 1; }
 
-# ─── Parse report fields ──────────────────────────────────────────────────────
+
 TIER=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.tier)")
 COMMIT=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.commit)")
 SIG=$("$NODE_CMD" -e "const r=require('./$REPORT');console.log(r.failureSignature)")
@@ -42,7 +38,7 @@ limited.forEach(f => console.log(\`\${f.file}:\${f.line} [\${f.code}] \${f.messa
 ")
 FAILURE_COUNT=$(echo "$FAILURES" | grep -c . || echo 0)
 
-# ─── Gather ±15 lines of source context around each distinct failing location ─
+
 CONTEXT=$("$NODE_CMD" -e "
 const r = require('./$REPORT');
 const fs = require('fs');
@@ -68,13 +64,13 @@ for (const f of all.slice(0, 20)) {
 console.log(lines.join('\n'));
 " 2>/dev/null || echo "(source context unavailable)")
 
-# ─── Prior attempts on this signature ────────────────────────────────────────
+
 PRIOR=""
 if [[ -n "$PRIOR_ATTEMPTS_FILE" ]] && [[ -f "$PRIOR_ATTEMPTS_FILE" ]]; then
   PRIOR=$(cat "$PRIOR_ATTEMPTS_FILE")
 fi
 
-# ─── Emit prompt packet ───────────────────────────────────────────────────────
+
 cat <<PROMPT_EOF
 CYCLE ${CYCLE_N} of ${MAX_CYCLES} — gates failed
 

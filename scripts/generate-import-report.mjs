@@ -1,10 +1,6 @@
 #!/usr/bin/env node
-// =============================================================================
-// scripts/generate-import-report.mjs  — Import report generator
-// =============================================================================
 // Called by import-lovable.sh. Reads the current repo and emits import-report.md
 // with all 6 checks required by the SOW.
-// =============================================================================
 
 import { execSync } from 'child_process'
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'fs'
@@ -35,11 +31,11 @@ function grepRecursive(pattern, dirs, flags = 'rEn') {
   }
 }
 
-// ─── Check 1: Float currency math ────────────────────────────────────────────
+
 const floatHits = grepRecursive('toFixed\\s*\\(', ['src'])
 const floatCount = floatHits ? floatHits.split('\n').filter(Boolean).length : 0
 
-// ─── Check 2: data-testid coverage ───────────────────────────────────────────
+
 const allInteractive = grepRecursive('<(button|input|select|textarea)', ['src'])
 const missingTestId = allInteractive
   ? allInteractive
@@ -48,24 +44,24 @@ const missingTestId = allInteractive
   : []
 const missingCount = missingTestId.length
 
-// ─── Check 3: TypeScript errors ──────────────────────────────────────────────
+
 const tscOutput = run('npx tsc --noEmit 2>&1')
 const tscErrors = tscOutput
   .split('\n')
   .filter((l) => l.includes('error TS'))
 const tscErrorCount = tscErrors.length
 
-// ─── Check 4: Lint errors ─────────────────────────────────────────────────────
+
 const lintOutput = run('npx @biomejs/biome check src/ 2>&1')
 const lintErrorCount = (lintOutput.match(/error/gi) ?? []).length
 
-// ─── Check 5: Banned patterns ─────────────────────────────────────────────────
+
 const BANNED_PATTERN =
   '@ts-ignore|@ts-expect-error|as any|biome-ignore|test\\.skip|test\\.only|xit\\(|describe\\.skip'
 const bannedHits = grepRecursive(BANNED_PATTERN, ['src', 'e2e'])
 const bannedCount = bannedHits ? bannedHits.split('\n').filter(Boolean).length : 0
 
-// ─── Check 6: Off-platform dependencies ──────────────────────────────────────
+
 const PLATFORM_LIST = new Set([
   'react',
   'react-dom',
@@ -85,7 +81,7 @@ try {
   offPlatform = Object.keys(all).filter((k) => !PLATFORM_LIST.has(k))
 } catch {}
 
-// ─── Build report ─────────────────────────────────────────────────────────────
+
 const lines = []
 
 lines.push('# Import Report')

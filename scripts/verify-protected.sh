@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# =============================================================================
-# scripts/verify-protected.sh  — Protected-file integrity check
-# =============================================================================
 # Verifies that no files under e2e/, scripts/, biome.json, tsconfig.json,
 # or playwright.config.* have been modified since the last green commit.
 #
 # Run AFTER every Dyad invocation, BEFORE re-gating.
 # Either failure here → immediate escalation, NOT another retry attempt.
-# =============================================================================
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

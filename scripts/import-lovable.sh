@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
-# =============================================================================
-# scripts/import-lovable.sh  — Component A: Lovable Import Harness
-# =============================================================================
 # Usage: bash scripts/import-lovable.sh [<repo-or-path>]
 #   <repo-or-path>  Path to the Lovable export directory.
 #                   Defaults to CWD if omitted (run from inside the export).
 #
 # Idempotent: running twice produces no diff on the second run.
 # Proven against multiple Lovable exports without modification.
-# =============================================================================
 set -euo pipefail
 
 HARNESS_VERSION="1.0.0"
@@ -18,7 +14,7 @@ TARGET="${1:-"$(pwd)"}"
 # Resolve to absolute path
 TARGET="$(cd "$TARGET" && pwd)"
 
-# ─── Ensure 'node' is on PATH ─────────────────────────────────────────────────
+
 # On Windows + WSL, node may not be on bash's PATH even if npx is.
 if ! command -v node &>/dev/null; then
   # Try to find node next to npx
@@ -55,13 +51,13 @@ ok()   { echo "[import] ✓ $*"; }
 warn() { echo "[import] ⚠ $*"; }
 fail() { echo "[import] ✗ FATAL: $*" >&2; exit 1; }
 
-# ─── 0. Sanity: target must exist ────────────────────────────────────────────
+
 [[ -d "$TARGET" ]] || fail "Target directory does not exist: $TARGET"
 cd "$TARGET"
 log "Onboarding: $TARGET"
 log "Harness version: $HARNESS_VERSION"
 
-# ─── 1. Git init if needed ────────────────────────────────────────────────────
+
 if [[ ! -d ".git" ]]; then
   git init
   git config user.email "harness@lotusaiworks.com"
@@ -71,10 +67,10 @@ else
   ok "git already initialised"
 fi
 
-# ─── 2. Verify package.json exists ───────────────────────────────────────────
+
 [[ -f "package.json" ]] || fail "No package.json found — is this a Node project?"
 
-# ─── 3. Pin Node version via .nvmrc ──────────────────────────────────────────
+
 if [[ ! -f ".nvmrc" ]]; then
   node --version | sed 's/v//' | cut -d. -f1 > .nvmrc
   ok "Created .nvmrc: $(cat .nvmrc)"
@@ -107,7 +103,7 @@ else
   ok "Lockfile already present"
 fi
 
-# ─── 5. npm ci + build ───────────────────────────────────────────────────────
+
 log "Running npm ci..."
 npm ci 2>&1 | tail -5
 ok "npm ci succeeded"
@@ -118,7 +114,7 @@ if ! npm run build 2>&1; then
 fi
 ok "npm run build succeeded"
 
-# ─── 6. Biome ────────────────────────────────────────────────────────────────
+
 BIOME_VER="1.9.4"
 if ! $NODE_CMD -e "require('@biomejs/biome')" 2>/dev/null; then
   log "Installing Biome $BIOME_VER..."
@@ -183,7 +179,7 @@ else
   warn "useExhaustiveDependencies did NOT fire on probe — check biome.json rule group"
 fi
 
-# ─── 7. Playwright ───────────────────────────────────────────────────────────
+
 if ! $NODE_CMD -e "require('@playwright/test')" 2>/dev/null; then
   log "Installing Playwright..."
   npm install --save-dev @playwright/test 2>&1 | tail -3
@@ -223,7 +219,7 @@ else
   ok "playwright.config.ts already present"
 fi
 
-# ─── 8. Scaffold scripts/ ────────────────────────────────────────────────────
+
 mkdir -p scripts e2e test-results
 
 # Copy harness scripts from the scripts/ directory where this script lives
@@ -257,7 +253,7 @@ if [[ ! -f "e2e/.gitkeep" ]] && [[ -z "$(ls -A e2e/ 2>/dev/null)" ]]; then
   ok "e2e/ scaffolded"
 fi
 
-# ─── 9. harness.json ─────────────────────────────────────────────────────────
+
 IMPORT_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u)"
 $NODE_CMD - <<HARNESS_JS
 const fs = require('fs')
@@ -272,12 +268,12 @@ console.log('[import] harness.json written')
 HARNESS_JS
 ok "harness.json written"
 
-# ─── 10. Import report ───────────────────────────────────────────────────────
+
 log "Generating import-report.md..."
 $NODE_CMD scripts/generate-import-report.mjs "$HARNESS_VERSION" 2>&1
 ok "import-report.md generated"
 
-# ─── 11. Commit harness additions ────────────────────────────────────────────
+
 git add -A
 if git diff --cached --quiet; then
   ok "Nothing new to commit (idempotent re-run)"
@@ -286,7 +282,7 @@ else
   ok "Harness additions committed"
 fi
 
-# ─── 12. Tag baseline-v1 ─────────────────────────────────────────────────────
+
 if git tag | grep -q "^baseline-v1$"; then
   ok "baseline-v1 tag already exists"
 else
@@ -294,11 +290,10 @@ else
   ok "Tagged baseline-v1"
 fi
 
-# ─── Done ────────────────────────────────────────────────────────────────────
 echo ""
 echo "================================================================"
 echo "  Harness onboarding complete!"
 echo "  Target: $TARGET"
 echo "  Tag:    baseline-v1"
 echo "  Report: $TARGET/import-report.md"
-echo "================================================================"
+

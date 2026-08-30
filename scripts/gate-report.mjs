@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// =============================================================================
-// scripts/gate-report.mjs  — Structured gate failure aggregator
-// =============================================================================
 // Reads gate output files from test-results/ and produces gate-report.json
 //
 // Usage: node scripts/gate-report.mjs <tier>
@@ -19,7 +16,6 @@
 //     { "gate": "lint", "status": "passed", "failures": [] }
 //   ]
 // }
-// =============================================================================
 
 import { createHash } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -27,7 +23,7 @@ import { execSync } from 'child_process'
 
 const tier = parseInt(process.argv[2] ?? '0', 10)
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 
 function getCurrentCommit() {
   try {
@@ -53,7 +49,7 @@ function computeSignature(failures) {
   return 'sha256:' + createHash('sha256').update(data).digest('hex')
 }
 
-// ─── Parse tsc output ────────────────────────────────────────────────────────
+
 // tsc format: src/hooks/useCart.ts(42,5): error TS2345: Argument...
 function parseTscOutput(raw) {
   if (!raw) return []
@@ -71,7 +67,7 @@ function parseTscOutput(raw) {
   return failures
 }
 
-// ─── Parse Biome JSON reporter output ────────────────────────────────────────
+
 function parseBiomeJson(raw) {
   if (!raw) return []
   try {
@@ -95,7 +91,7 @@ function parseBiomeJson(raw) {
   }
 }
 
-// ─── Parse Playwright JSON reporter output ───────────────────────────────────
+
 function parsePlywrightJson(raw) {
   if (!raw) return []
   try {
@@ -125,7 +121,7 @@ function parsePlywrightJson(raw) {
   }
 }
 
-// ─── Build report ─────────────────────────────────────────────────────────────
+
 const commit = getCurrentCommit()
 
 const standardsStatus = existsSync('test-results/standards-failed') ? 'failed' : 'passed'

@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# =============================================================================
-# scripts/scan-banned.sh  — Banned-pattern scanner
-# =============================================================================
 # Scans src/, e2e/, and scripts/ for patterns that Dyad might use to cheat.
 # Exits 1 if any banned pattern is found.
 # This enforces constraints STRUCTURALLY, not just via prompt text.
-# =============================================================================
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

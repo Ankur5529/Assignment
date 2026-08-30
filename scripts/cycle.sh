@@ -1,8 +1,5 @@
 export NODE_CMD="${NODE_CMD:-node}"
 #!/usr/bin/env bash
-# =============================================================================
-# scripts/cycle.sh  — Component B: Cycle Harness
-# =============================================================================
 # Usage: bash scripts/cycle.sh <tier>
 #
 # Runs the test/fix loop:
@@ -18,14 +15,13 @@ export NODE_CMD="${NODE_CMD:-node}"
 #
 # On escalation: revert to last green commit, log, exit non-zero.
 # Never leave a half-fixed tree.
-# =============================================================================
 set -euo pipefail
 
 TIER="${1:-0}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# ─── Configuration ────────────────────────────────────────────────────────────
+
 MAX_ATTEMPTS_PER_SIG=3
 MAX_TOTAL_ATTEMPTS=6
 MAX_CONSECUTIVE_NO_PROGRESS=2
@@ -36,7 +32,7 @@ PROMPT_FILE="test-results/dyad-prompt.txt"
 PRIOR_ATTEMPTS_FILE="test-results/prior-attempts.txt"
 GATE_REPORT="test-results/gate-report.json"
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
+
 log()    { echo "[cycle] $*"; }
 warn()   { echo "[cycle] ⚠ $*"; }
 fail()   { echo "[cycle] ✗ $*" >&2; }
@@ -142,7 +138,7 @@ except: print(0)
   exit 1
 }
 
-# ─── Mode B: Dyad prompt interaction ────────────────────────────────────────
+
 # Mode B — GUI only: write prompt to file, block for operator, detect file changes
 invoke_dyad_mode_b() {
   local cycle_n="$1"
@@ -170,7 +166,7 @@ invoke_dyad_mode_b() {
   echo ""
 }
 
-# ─── Main loop ────────────────────────────────────────────────────────────────
+
 mkdir -p test-results
 
 CYCLE_NUM="${HARNESS_CYCLE_NUM:-1}"
@@ -194,7 +190,7 @@ PREV_FAILURE_COUNT=999
 NO_PROGRESS_STREAK=0
 declare -A SIG_ATTEMPT_COUNT
 
-# ─── Initial gate run ────────────────────────────────────────────────────────
+
 log "Running initial gates (tier $TIER)..."
 GATE_PASSED=false
 if bash scripts/gate.sh "$TIER" 2>&1; then
@@ -217,10 +213,10 @@ INITIAL_SIGNATURE="$(get_signature)"
 CURRENT_SIGNATURE="$INITIAL_SIGNATURE"
 CURRENT_FAILURE_COUNT="$(get_failure_count)"
 
-# ─── Fix loop ────────────────────────────────────────────────────────────────
+
 while true; do
 
-  # ── Wall-clock check ──────────────────────────────────────────────────────
+
   NOW_EPOCH="$(date +%s 2>/dev/null || echo 0)"
   ELAPSED=$(( NOW_EPOCH - CYCLE_START_EPOCH ))
   if [[ $ELAPSED -ge $CYCLE_MAX_SECONDS ]]; then
@@ -228,20 +224,20 @@ while true; do
       "$GREEN_COMMIT" "$CYCLE_NUM" "$STARTED_AT" "$TOTAL_ATTEMPTS" "$CURRENT_SIGNATURE"
   fi
 
-  # ── Total attempt cap ─────────────────────────────────────────────────────
+
   if [[ $TOTAL_ATTEMPTS -ge $MAX_TOTAL_ATTEMPTS ]]; then
     escalate "Total attempt cap reached ($TOTAL_ATTEMPTS/$MAX_TOTAL_ATTEMPTS)" \
       "$GREEN_COMMIT" "$CYCLE_NUM" "$STARTED_AT" "$TOTAL_ATTEMPTS" "$CURRENT_SIGNATURE"
   fi
 
-  # ── Per-signature attempt cap ─────────────────────────────────────────────
+
   SIG_COUNT="${SIG_ATTEMPT_COUNT[$CURRENT_SIGNATURE]:-0}"
   if [[ $SIG_COUNT -ge $MAX_ATTEMPTS_PER_SIG ]]; then
     escalate "Per-signature attempt cap reached ($SIG_COUNT/$MAX_ATTEMPTS_PER_SIG) for signature $CURRENT_SIGNATURE" \
       "$GREEN_COMMIT" "$CYCLE_NUM" "$STARTED_AT" "$TOTAL_ATTEMPTS" "$CURRENT_SIGNATURE"
   fi
 
-  # ── Oscillation check ─────────────────────────────────────────────────────
+
   if [[ -n "$PREV_SIGNATURE" ]] && \
      [[ "$PREV_SIGNATURE" != "$CURRENT_SIGNATURE" ]] && \
      [[ "${SIG_ATTEMPT_COUNT[$CURRENT_SIGNATURE]:-0}" -ge 1 ]]; then
@@ -249,7 +245,7 @@ while true; do
       "$GREEN_COMMIT" "$CYCLE_NUM" "$STARTED_AT" "$TOTAL_ATTEMPTS" "$CURRENT_SIGNATURE"
   fi
 
-  # ── No-progress check ─────────────────────────────────────────────────────
+
   if [[ "$CURRENT_FAILURE_COUNT" -ge "$PREV_FAILURE_COUNT" ]] && [[ $TOTAL_ATTEMPTS -gt 0 ]]; then
     NO_PROGRESS_STREAK=$(( NO_PROGRESS_STREAK + 1 ))
     warn "No progress streak: $NO_PROGRESS_STREAK (failures: $CURRENT_FAILURE_COUNT vs prev: $PREV_FAILURE_COUNT)"
@@ -261,7 +257,7 @@ while true; do
     NO_PROGRESS_STREAK=0
   fi
 
-  # ── Increment counters ────────────────────────────────────────────────────
+
   TOTAL_ATTEMPTS=$(( TOTAL_ATTEMPTS + 1 ))
   SIG_ATTEMPT_COUNT["$CURRENT_SIGNATURE"]=$(( SIG_COUNT + 1 ))
   PREV_SIGNATURE="$CURRENT_SIGNATURE"
@@ -269,13 +265,13 @@ while true; do
 
   log "Attempt $TOTAL_ATTEMPTS (sig_attempts=${SIG_ATTEMPT_COUNT[$CURRENT_SIGNATURE]}/$MAX_ATTEMPTS_PER_SIG, total=$TOTAL_ATTEMPTS/$MAX_TOTAL_ATTEMPTS)"
 
-  # ── Record prior attempt ──────────────────────────────────────────────────
+
   echo "Attempt $TOTAL_ATTEMPTS on sig $CURRENT_SIGNATURE: $(get_failure_count) failures" >> "$PRIOR_ATTEMPTS_FILE"
 
-  # ── Invoke Dyad (Mode B) ──────────────────────────────────────────────────
+
   invoke_dyad_mode_b "$TOTAL_ATTEMPTS" "$MAX_TOTAL_ATTEMPTS" "$PRIOR_ATTEMPTS_FILE"
 
-  # ── Post-Dyad safety checks ───────────────────────────────────────────────
+
   log "Running post-Dyad safety checks..."
 
   if ! bash scripts/verify-protected.sh 2>&1; then
@@ -299,7 +295,7 @@ while true; do
     warn "Dyad made no file changes"
   fi
 
-  # ── Re-gate ───────────────────────────────────────────────────────────────
+
   log "Re-running gates (tier $TIER)..."
   GATE_PASSED=false
   if bash scripts/gate.sh "$TIER" 2>&1; then
@@ -310,7 +306,7 @@ while true; do
   CURRENT_SIGNATURE="$(get_signature)"
   CURRENT_FAILURE_COUNT="$(get_failure_count)"
 
-  # ── Green? ────────────────────────────────────────────────────────────────
+
   if [[ "$GATE_PASSED" == "true" ]]; then
     ENDED_AT="$(timestamp)"
     DURATION=$(( $(date +%s 2>/dev/null || echo 0) - CYCLE_START_EPOCH ))
