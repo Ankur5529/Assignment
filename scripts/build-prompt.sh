@@ -1,3 +1,4 @@
+NODE_CMD=
 #!/usr/bin/env bash
 # =============================================================================
 # scripts/build-prompt.sh  — Failure → Dyad prompt packet constructor
