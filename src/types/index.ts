@@ -1,5 +1,3 @@
-// ─── Domain types ──────────────────────────────────────────────────────────────
-
 /** Size modifier for espresso + brewed drinks */
 export type Size = 'small' | 'medium' | 'large'
 

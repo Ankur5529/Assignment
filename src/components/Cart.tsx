@@ -1,7 +1,7 @@
-import type { CartLine as CartLineType } from '../types'
 import type { UseCartReturn } from '../hooks/useCart'
-import { CartLineItem } from './CartLine'
+import type { CartLine as CartLineType } from '../types'
 import { formatCents, subtotalCents, taxCents, totalCents } from '../utils/money'
+import { CartLineItem } from './CartLine'
 
 interface CartProps {
   lines: CartLineType[]
@@ -10,8 +10,6 @@ interface CartProps {
 }
 
 export function Cart({ lines, cart, onCheckout }: CartProps) {
-  const x = cart.doesNotExist;
-  const x = cart.doesNotExist;
   const isEmpty = lines.length === 0
   const sub = subtotalCents(lines)
   const tax = taxCents(sub)

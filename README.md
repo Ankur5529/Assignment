@@ -1,7 +1,22 @@
 # Lovable Import + Test/Fix Cycle Harness
 
-A reusable two-component harness for onboarding Lovable-generated SPAs and running
-automated test/fix cycles via Dyad.
+A reusable two-component harness for onboarding Lovable-generated SPAs and running automated test/fix cycles via Dyad.
+
+---
+
+## Deliverables Status (SOW Section 7)
+
+This repository fulfills the deliverables outlined in the project Statement of Work:
+
+| Deliverable | Status | Location / Notes |
+|-------------|--------|------------------|
+| **1. Component A (`import-lovable.sh`)** | ✅ Complete | `scripts/import-lovable.sh`. Idempotent script for onboarding Lovable exports. |
+| **2. Component B (Cycle Harness Scripts)** | ✅ Complete | `scripts/gate.sh`, `gate-report.mjs`, `build-prompt.sh`, `cycle.sh`, `verify-protected.sh`, `scan-banned.sh`. |
+| **3. Baseline Tag & History** | ✅ Complete | `baseline-v1` tag is present in the repository, with red states intact in git history. |
+| **4. Import Report** | ✅ Complete | `import-report.md` generated from the specimen import. |
+| **5. Cycle Log** | ⚠️ See Notes | The runner successfully generates `cycles.jsonl`. *(Note: explicitly untracked via `.gitignore` to prevent commit noise, but generated on cycle runs).* |
+| **6. Findings Document** | ✅ Complete | `FINDINGS.md` details the Dyad loop mode spike, defect class outcomes, and attempt thresholds. |
+| **7. README** | ✅ Complete | This document. Includes instructions for importing, running cycles, injecting defects, and reading logs. |
 
 ---
 
@@ -102,7 +117,7 @@ Each record:
 │   ├── dyad-prompt.txt      # Prompt for operator to paste into Dyad
 │   ├── biome-report.json    # Biome lint output
 │   └── tsc-output.txt       # TypeScript compiler output
-├── cycles.jsonl             # Cycle log (append-only)
+├── cycles.jsonl             # Cycle log (append-only, gitignored)
 ├── harness.json             # Import metadata
 ├── import-report.md         # Import check results
 ├── FINDINGS.md              # Dyad spike + empirical results

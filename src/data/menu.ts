@@ -5,7 +5,6 @@ import type { MenuItem } from '../types'
  * All prices are in integer cents.
  */
 export const MENU_ITEMS: MenuItem[] = [
-  // ─── Espresso ───────────────────────────────────────────────────────────────
   {
     id: 'espresso',
     category: 'espresso',
@@ -30,7 +29,6 @@ export const MENU_ITEMS: MenuItem[] = [
     allowsSize: true,
     allowsMilk: true,
   },
-  // ─── Brewed ─────────────────────────────────────────────────────────────────
   {
     id: 'filter-coffee',
     category: 'brewed',
@@ -47,7 +45,6 @@ export const MENU_ITEMS: MenuItem[] = [
     allowsSize: true,
     allowsMilk: true,
   },
-  // ─── Pastries ────────────────────────────────────────────────────────────────
   {
     id: 'butter-croissant',
     category: 'pastries',

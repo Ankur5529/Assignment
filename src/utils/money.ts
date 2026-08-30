@@ -1,7 +1,5 @@
-import type { CartLine } from '../types'
 import { SIZE_MODIFIERS } from '../data/menu'
-
-// ─── Formatting ────────────────────────────────────────────────────────────────
+import type { CartLine } from '../types'
 
 /**
  * Format an integer number of cents to a display string.
@@ -13,8 +11,6 @@ export function formatCents(cents: number): string {
   const remainder = Math.abs(cents % 100)
   return `$${dollars}.${String(remainder).padStart(2, '0')}`
 }
-
-// ─── Line totals ───────────────────────────────────────────────────────────────
 
 /**
  * Compute the unit price (in cents) for a single item+options combination.
@@ -33,8 +29,6 @@ export function unitPriceCents(line: CartLine): number {
 export function lineTotalCents(line: CartLine): number {
   return unitPriceCents(line) * line.quantity
 }
-
-// ─── Order totals ──────────────────────────────────────────────────────────────
 
 /** Sum of all line totals */
 export function subtotalCents(lines: CartLine[]): number {

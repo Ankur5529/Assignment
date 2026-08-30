@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { MenuItem } from '../types'
-import type { Size, Milk, ItemOptions } from '../types'
+import type { ItemOptions, Milk, Size } from '../types'
 
 interface MenuItemCardProps {
   item: MenuItem
@@ -46,7 +46,7 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
 
       {item.allowsSize && (
         <div className="option-group" data-testid={`size-group-${item.id}`}>
-          <label className="option-label">Size</label>
+          <div className="option-label">Size</div>
           <div className="option-pills">
             {SIZE_OPTIONS.map((opt) => (
               <button
@@ -67,7 +67,7 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
 
       {item.allowsMilk && (
         <div className="option-group" data-testid={`milk-group-${item.id}`}>
-          <label className="option-label">Milk</label>
+          <div className="option-label">Milk</div>
           <div className="option-pills">
             {MILK_OPTIONS.map((opt) => (
               <button

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import type { CartLine, MenuItem, ItemOptions } from '../types'
+import { useCallback, useEffect, useState } from 'react'
+import type { CartLine, ItemOptions, MenuItem } from '../types'
 
 const STORAGE_KEY = 'coffee-cart-v1'
 
@@ -46,12 +46,10 @@ export function useCart(): UseCartReturn {
     setLines((prev) => {
       const existing = prev.find((l) => l.key === key)
       if (existing) {
-        // R2 — same item + identical options → increment quantity
         return prev.map((l) =>
           l.key === key ? { ...l, quantity: l.quantity + 1 } : l
         )
       }
-      // R3 — different options → new line
       return [...prev, { key, item, options, quantity: 1 }]
     })
   }, [])
@@ -66,7 +64,6 @@ export function useCart(): UseCartReturn {
     setLines((prev) => {
       const line = prev.find((l) => l.key === key)
       if (!line) return prev
-      // R4 — quantity at 1 → remove line entirely
       if (line.quantity <= 1) {
         return prev.filter((l) => l.key !== key)
       }

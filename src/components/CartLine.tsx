@@ -14,7 +14,7 @@ function optionSummary(line: CartLine): string {
     parts.push(line.options.size.charAt(0).toUpperCase() + line.options.size.slice(1))
   }
   if (line.item.allowsMilk && line.options.milk !== 'none') {
-    parts.push(line.options.milk.charAt(0).toUpperCase() + line.options.milk.slice(1) + ' milk')
+    parts.push(`${line.options.milk.charAt(0).toUpperCase() + line.options.milk.slice(1)} milk`)
   }
   return parts.join(', ')
 }

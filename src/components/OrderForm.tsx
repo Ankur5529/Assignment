@@ -26,7 +26,6 @@ export function OrderForm({ lines, onConfirm, onBack }: OrderFormProps) {
 
   const nameValid = form.name.trim().length > 0
   const phoneValid = isValidPhone(form.phone)
-  // R6 — submit disabled until name non-empty AND exactly 10 phone digits
   const canSubmit = nameValid && phoneValid
 
   function handleSubmit(e: React.FormEvent) {
