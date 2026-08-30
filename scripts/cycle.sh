@@ -1,4 +1,3 @@
-export NODE_CMD=node
 #!/usr/bin/env bash
 # =============================================================================
 # scripts/cycle.sh  — Component B: Cycle Harness
