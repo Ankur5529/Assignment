@@ -21,10 +21,10 @@ cd "$ROOT"
 [[ -f "$REPORT" ]] || { echo "gate-report.json not found: $REPORT" >&2; exit 1; }
 
 # ─── Parse report fields ──────────────────────────────────────────────────────
-TIER=$(node -e "const r=require('./$REPORT');console.log(r.tier)")
-COMMIT=$(node -e "const r=require('./$REPORT');console.log(r.commit)")
-SIG=$(node -e "const r=require('./$REPORT');console.log(r.failureSignature)")
-STATUS=$(node -e "const r=require('./$REPORT');console.log(r.status)")
+TIER=$( -e "const r=require('./$REPORT');console.log(r.tier)")
+COMMIT=$( -e "const r=require('./$REPORT');console.log(r.commit)")
+SIG=$( -e "const r=require('./$REPORT');console.log(r.failureSignature)")
+STATUS=$( -e "const r=require('./$REPORT');console.log(r.status)")
 
 if [[ "$STATUS" == "passed" ]]; then
   echo "[build-prompt] Gates are PASSING — no prompt needed"
@@ -32,7 +32,7 @@ if [[ "$STATUS" == "passed" ]]; then
 fi
 
 # Collect all failures (max 20)
-FAILURES=$(node -e "
+FAILURES=$( -e "
 const r = require('./$REPORT');
 const all = r.gates.flatMap(g => g.failures.map(f => ({gate: g.gate, ...f})));
 const limited = all.slice(0, 20);
@@ -41,7 +41,7 @@ limited.forEach(f => console.log(\`\${f.file}:\${f.line} [\${f.code}] \${f.messa
 FAILURE_COUNT=$(echo "$FAILURES" | grep -c . || echo 0)
 
 # ─── Gather ±15 lines of source context around each distinct failing location ─
-CONTEXT=$(node -e "
+CONTEXT=$( -e "
 const r = require('./$REPORT');
 const fs = require('fs');
 const all = r.gates.flatMap(g => g.failures.map(f => ({...f})));
